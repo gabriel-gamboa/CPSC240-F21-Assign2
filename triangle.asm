@@ -44,11 +44,11 @@ segment .data
 align 16
 promptname db "Please enter your last name: ", 0
 prompttitle db "Please enter your title (Mr, Ms, Nurse, Engineer, etc): ", 0
-enjoy_message db "Please enjoy your triangles.", 0      ;originally: enjoy_message db "Please enjoy your triangles %s %s.", 0
+enjoy_message db "Please enjoy your triangles %s %s.", 10, 0      ;originally: enjoy_message db "Please enjoy your triangles %s %s.", 0
 ;align 16
 trianglesidesprompt db "Please enter the sides of your triangle separated by ws:",0
-area_message db "The area of this triangle is %5.9lf square units.", 0       ;lf???
-hypotenuse_message db "The length of this hypotenuse is %5.9lf units."
+area_message db "The area of this triangle is %5.9lf square units.", 10, 0       ;lf???
+hypotenuse_message db "The length of this hypotenuse is %5.9lf units.", 10, 0
 ;good_bye db "The floating module will return the large number to the caller.  Have a nice afternoon",10,0
 two_float_format db "%lf %lf",0
 ;align 16
@@ -152,10 +152,10 @@ mov [programmers_title + r14 -1],r15                    ;new line character is 1
 mov rax, 0
 mov rdi, trianglesidesprompt          ;"Please enter the sides of your triangle separated by ws: "
 call printf
-pop rax
+;pop rax
 
 
-push qword 99 ;Get on boundary
+;push qword 99 ;Get on boundary
 ;Create space for 2 float numbers
 push qword -1
 push qword -2
@@ -170,7 +170,7 @@ movsd xmm12, [rsp]
 movsd xmm13, [rsp+8]
 pop rax                        ;Reverse the previous "push qword -2"
 pop rax                        ;Reverse the previous "push qword -1"
-pop rax                        ;Reverse the previous "push qword 99"
+;pop rax                        ;Reverse the previous "push qword 99"
 
 
 ;================================== End of input two float numbers ====================================
@@ -184,7 +184,7 @@ cvtsi2sd xmm15, [rsp]   ;convert 2 to 2.0 and store it in xmmm15
 pop rax                 ;why do we need to pop rax. what is in it?
 
 ;area block             ;float 1 in xmm12, float 2 in xmm13, 2.0 in xmm15
-push qword 0            ;why do we do this?
+;push qword 0            ;why do we do this?
 mov rax, 1              ;1 floating point number will be passed into printf
 mov rdi, area_message   ;"The area of this triangle is %5.9lf square units."
 divsd xmm12, xmm15      ;xmm12 contains half its original value  -area = 1/2base*height
@@ -192,11 +192,11 @@ movsd xmm14, xmm13      ;make a copy of xmm13 to xmm14
 mulsd xmm14, xmm12      ;computes the area of the right triangle and stores it in xmm14
 movsd xmm0,xmm14        ;printf prints out starting in xmm0?
 call printf
-pop rax
+;pop rax
 
 
 ;hypotenuse block
-push qword 0
+;push qword 0
 mov rax, 1                      ;1 floating point number will be passed into printf
 mov rdi, hypotenuse_message     ;The length of the hypotenuse is %5.9lf units
 mulsd xmm12, xmm15              ;undo divide xmm12 by 2 to get original value in xmm12. side 1 is in xmm12, side 2 is in xmm13
@@ -208,7 +208,7 @@ addsd xmm15, xmm14              ;add 2 a^2 and b^2 to get c^2  value in xmm15 (p
 sqrtsd xmm11, xmm15             ;c (hypotenuse) value now in xmm11
 movsd xmm0,xmm11                ;printf prints out starting in xmm0?
 call printf
-pop rax
+;pop rax
 
 
 
@@ -224,13 +224,13 @@ pop rax
 ;===== Reply to the user w/ title and name and ask about their day ==================================================================================================================================================
 ;push qword 0
 ;push word 0          ;why did this block segfault?
-
-mov        rax, 0                                           ;No floats used
+;push qword 99
+mov qword  rax, 0                                           ;No floats used
 mov        rdi, enjoy_message                             ;"Please enjoy your triangles %s %s. "
 mov        rsi, programmers_title
 mov        rdx, programmers_name
 call       printf                                           ;C printf() function handles the output
-
+;pop rax
 
 ;mov rax, 0
 ;mov rdi, enjoy_message
