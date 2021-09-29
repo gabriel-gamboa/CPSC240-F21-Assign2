@@ -1,35 +1,36 @@
 ;****************************************************************************************************************************
-;Program name: "Floating IO".  This program demonstrates the input of multiple float numbers from the standard input device *
-;using a single instruction and the output of multiple float numbers to the standard output device also using a single      *
-;instruction.  Copyright (C) 2019 Floyd Holliday.                                                                           *
+;Program name: "Assignment 2".  This program greets a user by their inputted name  *
+;and title.  Copyright (C) 2021  Gabriel Gamboa                                                                                 *
 ;This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License  *
 ;version 3 as published by the Free Software Foundation.                                                                    *
 ;This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied         *
 ;warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.     *
-;A copy of the GNU General Public License v3 is available here:  <https:;www.gnu.org/licenses/>.                            *
+;A copy of the GNU General Public License v3 is available here:  <https://www.gnu.org/licenses/>.                           *
 ;****************************************************************************************************************************
 
-
-;========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1=========2=========3**
-;
+;========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1=========2=========3=========4=========5=========6=========7**
 ;Author information
-;  Author name: Floyd Holliday
-;  Author email: holliday@fullerton.edu
+;  Author name: Gabriel Gamboa
+;  Author email: gabe04@csu.fullerton.edu
 ;
 ;Program information
-;  Program name: Floating IO
-;  Programming languages: One modules in C and one module in X86
-;  Date program began: 2019-Oct-25
-;  Date of last update: 2019-Oct-26
-;  Date of reorganization of comments: 2019-Oct-29
-;  Files in this program: manage-floats.c, float-input-output.asm
-;  Status: Finished.  The program was tested extensively with no errors in Xubuntu19.04.
+; Program name: Assignment 2
+;  Programming languages X86 with one module in C
+;  Date program began 2021-Sep-24
+;  Date program completed 2021-Sep-29
 ;
-;This file
-;   File name: float-input-output.asm
-;   Language: X86 with Intel syntax.
-;   Max page width: 132 columns
-;   Assemble: nasm -f elf64 -l float-input-output.lis -o float-input-output.o float-input-output.asm
+;Purpose
+;  This program takes 2 floating numbers which represent 2 sides of a triangle as
+;  inputs and returns the area of the triagle and the hypotenuse.
+;Project information
+;  Files: pythagoras.c, triangle.asm, r.sh
+;  Status: The program has been tested extensively with no detectable errors.
+;
+;Translator information
+;  Linux: nasm -f elf64 -l hello.lis -o hello.o hello.asm
+
+
+;============================================================================================================================================================
 
 
 ;===== Begin code area ============================================================================================================
@@ -49,6 +50,7 @@ enjoy_message db "Please enjoy your triangles %s %s.", 10, 0      ;originally: e
 trianglesidesprompt db "Please enter the sides of your triangle separated by ws:",0
 area_message db "The area of this triangle is %5.9lf square units.", 10, 0       ;lf???
 hypotenuse_message db "The length of this hypotenuse is %5.9lf units.", 10, 0
+invalid_input_message db "Invalid input run program.", 10, 0
 ;good_bye db "The floating module will return the large number to the caller.  Have a nice afternoon",10,0
 two_float_format db "%lf %lf",0
 ;align 16
@@ -66,8 +68,8 @@ segment .text ;Reserved for executing instructions.
 
 rtriangle:
 
-;Prolog ===== Insurance for any caller of this assembly module ====================================================================
-;Any future program calling this module that the data in the caller's GPRs will not be modified.
+;=============================================================================================
+;back up data in registers
 push rbp
 mov  rbp,rsp
 push rdi                                                    ;Backup rdi
@@ -85,7 +87,7 @@ push r15                                                    ;Backup r15
 push rbx                                                    ;Backup rbx
 pushf                                                       ;Backup rflags
 
-;Registers rax, rip, and rsp are usually not backed up.
+
 
 
 ;push qword 0                                       ;causes a segfault in printf - why?
@@ -142,38 +144,59 @@ mov [programmers_title + r14 -1],r15                    ;new line character is 1
                                                         ;we replace it with 0 so that's why we do the ,r15
                                                         ;i don't know why we have to put in the [hello.programmers_title + r14 - 1]
                                                         ;or what the brackets are for. I'd think it would work without the hello.programmers_name, assuming the length is stored in r14
-;END ADDED STUFF
+;============================================================================================================================================================================================
 
 
 
-
+;===================Recieve sides of Triangle===================================================================================================================================================
 ;Display a prompt message asking for inputs
 ;push qword 99                        ;why segfault here? does align 16 align all array data declarations?
-mov rax, 0
+mov rax, 0                            ;format for printf, no floats used
 mov rdi, trianglesidesprompt          ;"Please enter the sides of your triangle separated by ws: "
-call printf
+call printf                           ;prints out trianglesideprompt
 ;pop rax
 
 
 ;push qword 99 ;Get on boundary
 ;Create space for 2 float numbers
-push qword -1
-push qword -2
-mov rax, 0
+push qword -1                 ;creates space for a float number
+push qword -2                 ;creates space for another float number
+mov rax, 0                    ;format for printf, no floats used
 mov rdi, two_float_format      ;"%lf%lf"
 mov rsi, rsp                   ;rsi points to first quadword on the stack
 mov rdx, rsp
 add rdx, 8                     ;rdx points to second quadword on the stack
 call scanf
 
-movsd xmm12, [rsp]
-movsd xmm13, [rsp+8]
+movsd xmm12, [rsp]            ;xmm12 contains first side of triangle entered
+movsd xmm13, [rsp+8]          ;xmm13 contains second side of triangle inputted
 pop rax                        ;Reverse the previous "push qword -2"
 pop rax                        ;Reverse the previous "push qword -1"
 ;pop rax                        ;Reverse the previous "push qword 99"
 
 
-;================================== End of input two float numbers ====================================
+;----add if else check for 0's or negatives HERE-------------------
+xorpd xmm9, xmm9                ;fast way of creating 0.0 in a register.  I think xmm's automatically contain any float number, so xoring it by itself will create 0.0
+ucomisd xmm12, xmm9             ;compares two floats and stores it in rflags
+ja validInput                   ;create a jump condition based off what ucomisd stored in rflags. If side inputted is greater than 0 then we jump to validInput
+mov rax, 0                      ;format for printf
+mov rdi, stringformat           ;format for printf
+mov rsi, invalid_input_message  ;output invalid input message if input is<= 0
+call printf                     ;print out invalid input message
+jmp finish                      ;jump to finish if input is invalid
+
+validInput:                     ;signifier to start code here if jump conition is satisfied
+xorpd xmm9, xmm9                ;fast way of creating 0.0 in a register.  I think xmm's automatically contain any float number, so xoring it by itself will create 0.0
+ucomisd xmm13, xmm9             ;compares two floats and stores it in rflags
+ja valid                        ;create a jump condition based off what ucomisd stored in rflags. If side inputted is greater than 0 then we jump to validInput
+mov rax, 0                      ;format for printf
+mov rdi, stringformat           ;format for printf
+mov rsi, invalid_input_message  ;output invalid input message if input is<= 0
+call printf                     ;print out invalid input message
+jmp terminate                   ;jump to terminate if input is invalid
+valid:                          ;signifier to start code here if jump condition is satisfied
+;----------------------------------------------------
+;================================== End of input triangle sides ====================================
 
 
 ;============= Begin arithmetic section  ===============================================================
@@ -217,7 +240,7 @@ call printf
 
 
 
-;========== Prepare to exit from this program ==================================================================
+;============================================================================================================
 
 ;ADDED STUFF HERE
 
@@ -239,23 +262,16 @@ call       printf                                           ;C printf() function
 
 
 ;pop rax
-
+finish:                         ;invalid input jumps to this part
+terminate:                      ;invalid input jumps to this part
 movsd xmm0, xmm11              ;hypotenuse return to caller.
 
 ;=================================================================================================================
 
 ;END ADDED STUFF
 
-;Display good-bye message (the next block of instructions)
-;mov rax, 0
-;mov rdi, good_bye              ;"The floating module will return the large number to the caller.  Have a nice afternoon"
-;call printf
 
-;pop rax                        ;Reverse the push near the beginning of this asm function.
-
-;movsd xmm0, xmm15              ;Select the largest value for return to caller.
-
-;===== Restore original values to integer registers ===============================================================================
+;===== Restore backed up registers ===============================================================================
 popf                                                        ;Restore rflags
 pop rbx                                                     ;Restore rbx
 pop r15                                                     ;Restore r15
